@@ -1,0 +1,3 @@
+Run this in terminal when necessary so the PyMuPDF library works:
+
+python -m pip install -r requirements.txt

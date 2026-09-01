@@ -1,53 +1,29 @@
+import pymupdf
 import streamlit as st
-from openai import OpenAI
+from openai import OpenAI, OpenAIError, AuthenticationError, NotFoundError
 
-# Show title and description.
-st.title("📄 Document question answering")
-st.write(
-    "Upload a document below and ask a question about it – GPT will answer! "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
+page1 = st.Page('Lab1.py', title = 'Lab1', icon = ':material/coffee:')
+page2 = st.Page('Lab2.py', title = 'Lab2', icon = ':material/coffee:')
+
+pg = st.navigation([page1, page2])
+st.set_page_config(page_title = 'LabApp', page_icon = ':material/coffee:')
+pg.run()
+
+language_select = st.sidebar.selectbox(
+    'Select language:',
+    ('English', 'Spanish', 'French', 'Mandarin')
 )
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-else:
+summary_type_select = st.sidebar.selectbox(
+    'Select type of summary:',
+    ('100 words', '2 connecting paragraphs', '5 bullet points')
+)
 
-    # Create an OpenAI client.
-    client = OpenAI(api_key=openai_api_key)
+if 'language_select' not in st.session_state:
+    st.session_state['language_select'] = language_select
 
-    # Let the user upload a file via `st.file_uploader`.
-    uploaded_file = st.file_uploader(
-        "Upload a document (.txt or .md)", type=("txt", "md")
-    )
+if 'summary_type_select' not in st.session_state:
+    st.session_state['summary_type_select'] = summary_type_select
 
-    # Ask the user for a question via `st.text_area`.
-    question = st.text_area(
-        "Now ask a question about the document!",
-        placeholder="Can you give me a short summary?",
-        disabled=not uploaded_file,
-    )
-
-    if uploaded_file and question:
-
-        # Process the uploaded file and question.
-        document = uploaded_file.read().decode()
-        messages = [
-            {
-                "role": "user",
-                "content": f"Here's a document: {document} \n\n---\n\n {question}",
-            }
-        ]
-
-        # Generate an answer using the OpenAI API.
-        stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            stream=True,
-        )
-
-        # Stream the response to the app using `st.write_stream`.
-        st.write_stream(stream)
+st.write(st.session_state.language_select}"
+st.write(st.session_state.summary_type_select}"
