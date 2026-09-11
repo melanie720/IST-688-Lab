@@ -2,6 +2,17 @@ import pymupdf
 import streamlit as st
 from openai import OpenAI, OpenAIError, AuthenticationError, NotFoundError
 
+# Hide the sidebar and the collapse/expand toggle button
+st.markdown(
+    """
+    <style>
+        [data-testid="stSidebar"] {display: none;}
+        [data-testid="collapsedControl"] {display: none;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Show title and description.
 st.title("📄 Mel's Document Q&A App")
 st.caption("Upload a text or pdf file and ask a question about it.")

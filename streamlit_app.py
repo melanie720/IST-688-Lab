@@ -1,10 +1,11 @@
 import streamlit as st
 
 page1 = st.Page('Lab1.py', title='Lab1', icon=':material/description:')
-page2 = st.Page('Lab2.py', title='Lab2', icon=':material/description:', default=True)
+page2 = st.Page('Lab2.py', title='Lab2', icon=':material/description:')
+page3 = st.Page('Lab3.py', title='Lab3', icon=':material/description:', default=True)
 
 st.set_page_config(page_title='LabApp', page_icon=':material/science:')
-pg = st.navigation({'Assignments': [page1, page2]}, position='top')
+pg = st.navigation([page1, page2, page3], position='top')
 
 st.sidebar.markdown("<h3 style='color:#8B0000; '>Summary Options</h3>", unsafe_allow_html=True)
 
