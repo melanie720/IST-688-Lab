@@ -1,47 +1,13 @@
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+import pymupdf as fitz
 import streamlit as st
 from openai import OpenAI, AuthenticationError
-
-# Hide the sidebar and the collapse/expand toggle button
-st.markdown(
-    """
-    <style>
-        [data-testid="stSidebar"] {display: none;}
-        [data-testid="collapsedControl"] {display: none;}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# Positioning header
-st.markdown(
-    """
-    <style>
-        .st-key-app_header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 9999;
-            background-color: var(--background-color);
-            padding: 3.5rem 1rem 1rem 1rem;
-            text-align: center;
-        }
-        .st-key-app_header h1,
-        .st-key-app_header p {
-            text-align: center;
-        }
-        .stMainBlockContainer {
-            padding-top: 9rem;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# Show title and description.
-with st.container(key="app_header"):
-    st.title("📄 Mel's Chatbot")
-    st.caption("• Let's chat.")
+import chromadb
+from pathlib import Path
+import os
 
 # Retrieve API key and create an OpenAI client.
 if "client" not in st.session_state:
@@ -55,12 +21,88 @@ except AuthenticationError:
     st.error("API key needs to be updated.")
     st.stop()
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+target_path = os.path.join(script_dir, "Lab-04-Data")
+
+def extract_text_from_pdf(file_path):
+    doc = fitz.open(file_path)
+    text = "".join([page.get_text() for page in doc])
+    return text
+
+def add_to_collection(collection, folder_name):
+    client = st.session_state.client
+    existing = set(collection.get()['ids'])
+
+    for file in os.listdir(folder_name):
+        if not file.lower().endswith('.pdf') or file in existing:
+            continue
+
+        text = extract_text_from_pdf(os.path.join(folder_name, file))
+
+        response = client.embeddings.create(
+            input=text,
+            model='text-embedding-3-small'
+        )
+
+        collection.add(
+            documents=[text],
+            ids=[file],
+            embeddings=[response.data[0].embedding],
+            metadatas=[{"filename": file}]
+        )
+
+if 'Lab4_VectorDB' not in st.session_state:
+    st.session_state["Lab4_VectorDB"] = chromadb.PersistentClient(path = './ChromaDB_for_Lab')
+    collection = st.session_state.Lab4_VectorDB.get_or_create_collection('Lab4Collection')
+    add_to_collection(collection, target_path)
+else:
+    collection = st.session_state.Lab4_VectorDB.get_or_create_collection('Lab4Collection')
+
+st.markdown(
+    """
+    <div style="
+        background-color: #FFFBE6;
+        border: 1px solid #FFE58F;
+        border-left: 5px solid #FAAD14;
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        color: #262730;
+    ">
+        <div style="font-weight: 600; font-size: 1.05rem; color: #8C5300; margin-bottom: 6px;">
+            Chatbot Details
+        </div>
+        <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; line-height: 1.6;">
+            <li>Ask a question about courses or anything.</li>
+            <li>Hit <em>'Yes'</em> for more detail when prompted. <strong>Each call keeps the last 6 messages as memory.</strong></li>
+        </ul>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Show title and description.
+st.title(":material/description: Mel's Chatbot using RAG")
+st.caption("Let's chat!")
+
+# Hiding the "Press Enter to submit" caption in my input field
+st.html("""
+    <style>
+    div[data-testid="InputInstructions"] {
+        display: none !important;
+    }
+    </style>
+""")
+
 # System prompt
 system_prompt = {
     "role": "system",
     "content": (
-        "Explain everything simply enough that a 10 year old could understand it. Use short sentences, everyday words, "
-        "concrete examples, no jargon, and never mention that you are simplifying."
+        "Below are excerpts from a document collection. "
+        "If the excerpts are relevant to the user's question, start response by " 
+        "saying exactly: 'I'm using knowledge from the RAG.' Then, use the context to answer the question." 
+        "If the excerpts are not relevant to the user's question, start response by " 
+        "saying exactly: 'I'm answering from my general knowledge, not the RAG.'"
     )
 }
  
@@ -69,12 +111,11 @@ more_info_prompt = {
     "role": "system",
     "content": (
         "User would like more information on the topic just explained. Give new details and examples that build on what you "
-        "already said, and remember to keep it simple enough for a 10 year old. "
-        "Don't ask any questions at the end."
+        "already said. Don't ask any questions at the end."
     )
 }
  
-buffer = 4
+buffer = 6
 
 # If "messages" is not already in session state, we initialize it here with a message from assistant.
 # Setting other state variables.
@@ -102,10 +143,35 @@ prompt = st.chat_input(
     disabled=st.session_state.awaiting_choice # Not currently awaiting Yes/No choice, so input field is not disabled.
 )
 
+if "context" not in st.session_state:
+    st.session_state.context = []
+
 # If user provides a prompt, append it to messages and we are now waiting for a regular answer.
 if prompt:
+    client = st.session_state.client
+    response = client.embeddings.create(
+        input=prompt,
+        model='text-embedding-3-small'
+    )
+
+    # Get the embedding
+    query_embedding = response.data[0].embedding
+
+    # Get the text related to this question (this prompt)
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=3  # The number of closest documents to return
+    )
+
+    # Replacing the context each turn.
+    st.session_state.context = [
+        {"role": "system", "content": doc}
+        for doc in results['documents'][0]
+    ]
+
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.session_state.pending = "answer"
+
     st.rerun()
 
 # If we are awaiting a Yes/No choice, show the buttons.
@@ -134,7 +200,7 @@ if st.session_state.pending:
     # System prompt is pinned to the top.
     # The buffer is applied to messages after the system prompt.
     api_messages = (
-        st.session_state.messages[:1] + st.session_state.messages[1:][-buffer:]
+        st.session_state.messages[:1] + st.session_state.messages[1:][-buffer:] + st.session_state.context
     )
  
     # On a "more info" answer, add the extra instruction at the end of the request.
