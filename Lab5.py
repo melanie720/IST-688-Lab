@@ -1,7 +1,5 @@
 import json, requests, streamlit as st
 from openai import OpenAI, AuthenticationError
-import hydralit_components as hc
-from hydralit_components.Loaders.loaders import HyLoader, Loaders
 
 # Retrieve API key and create an OpenAI client.
 if "client" not in st.session_state:
