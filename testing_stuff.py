@@ -1,49 +1,42 @@
-import os
-import streamlit as st
-import pymupdf as fitz
+import requests, streamlit as st
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-target_path = os.path.join(script_dir, "Lab-04-Data")
+def get_current_weather(location="Syracuse"):
+    url = f'https://wttr.in/{location}?format=j1'
+    response = requests.get(url, timeout=10)
+    if response.status_code != 200:
+        raise Exception(f'wttr.in error: status {response.status_code}')
+    try:
+        data = response.json()
+    except ValueError:
+        raise Exception(f'Could not find a location named {location}')
 
-def extract_text_from_pdf(file_path):
-    doc = fitz.open(file_path)
-    text = "".join([page.get_text() for page in doc])
-    return text
+    current = data['current_condition'][0]
+    today = data['weather'][0]
+    area = data['nearest_area'][0]
 
-for file in os.listdir(target_path):
-    text = extract_text_from_pdf(target_path + '/' + file)
-    print(text)
+    # hourly entries are every 3 hours: index 3 = 9am, 5 = 3pm, 6 = 6pm
+    def snapshot(i):
+        h = today['hourly'][i]
+        return {'temp_F': float(h['tempF']),
+                'feels_like_F': float(h['FeelsLikeF']),
+                'description': h['weatherDesc'][0]['value'],
+                'chance_of_rain': int(h['chanceofrain'])}
 
+    print({
+        'location': f"{area['areaName'][0]['value']}, {area['region'][0]['value']}",
+        'temperature_F': float(current['temp_F']),
+        'feels_like_F': float(current['FeelsLikeF']),
+        'description': current['weatherDesc'][0]['value'],
+        'humidity': int(current['humidity']),
+        'wind_mph': int(current['windspeedMiles']),
+        'uv_index': int(current['uvIndex']),
+        'high_F': float(today['maxtempF']),
+        'low_F': float(today['mintempF']),
+        'max_chance_of_rain': max(int(h['chanceofrain']) for h in today['hourly']),
+        'max_chance_of_snow': max(int(h['chanceofsnow']) for h in today['hourly']),
+        'morning': snapshot(3),
+        'afternoon': snapshot(5),
+        'evening': snapshot(6),
+    })
 
-###########################################################################
-
-#### QUERYING A COLLECTION — ONLY USED FOR TESTING ####
-topic = st.sidebar.text_input('Topic', placeholder='Type your topic (e.g., GenAI)...')
-
-if topic:
-    client = st.session_state.client
-    response = client.embeddings.create(
-        input=topic,
-        model='text-embedding-3-small'
-    )
-
-    # Get the embedding
-    query_embedding = response.data[0].embedding
-
-    # Get the text related to this question (this prompt)
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=3  # The number of closest documents to return
-    )
-
-    # Display the results
-    st.subheader(f'Results for: {topic}')
-
-    for i in range(len(results['documents'][0])):
-        doc = results['documents'][0][i]
-        doc_id = results['ids'][0][i]
-
-        st.write(f'**{i+1}. {doc_id}**')
-
-else:
-    st.info('Enter a topic in the sidebar to search the collection')
+get_current_weather("Atlanta")

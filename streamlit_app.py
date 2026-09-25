@@ -13,9 +13,10 @@ st.set_page_config(
 page1 = st.Page('Lab1.py', title='Lab 1', icon=':material/description:')
 page2 = st.Page('Lab2.py', title='Lab 2', icon=':material/description:')
 page3 = st.Page('Lab3.py', title='Lab 3', icon=':material/description:')
-page4 = st.Page('Lab4.py', title='Lab 4', icon=':material/description:', default=True)
+page4 = st.Page('Lab4.py', title='Lab 4', icon=':material/description:')
+page5 = st.Page('Lab5.py', title='Lab 5', icon=':material/description:', default=True)
 
-pg = st.navigation([page1, page2, page3, page4], position='top')
+pg = st.navigation([page1, page2, page3, page4, page5], position='top')
 
 # CSS for Containers
 css = '''
