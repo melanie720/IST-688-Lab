@@ -182,7 +182,7 @@ if submitted and user_input:
                 "vampires, or other creatures and interesting things related to nighttime, "
                 "the moon, sunrise, sunset, or astronomy in general. Also talk about how the lighting "
                 "due to the weather, the time, outside lighting (like moon and sun) will affect pictures "
-                "and selfies."
+                "and selfies. Don't ask any follow up questions."
             ),
         })
 
