@@ -6,3 +6,9 @@ PyPDF2
 PyMuPDF
 protobuf==3.20
 requests
+
+# CPU-only torch keeps the Streamlit Community Cloud install small
+--extra-index-url https://download.pytorch.org/whl/cpu
+numpy
+torch
+sentence-transformers
