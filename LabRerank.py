@@ -385,7 +385,7 @@ def main():
             "Extra time per claim",
             f"{r['rerank_ms']:.0f} ms",
             delta=f"+{r['rerank_ms']:.0f} ms (stage 1 alone: {r['retrieve_ms']:.0f} ms)",
-            delta_color="inverse",  # more time is bad, so show it in red
+            delta_color="inverse",
         )
         st.caption(
             f"Before re-ranking: Recall@{k} = {r['recall_before']:.3f}, "
