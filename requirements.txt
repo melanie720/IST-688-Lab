@@ -12,3 +12,6 @@ requests
 numpy
 torch
 sentence-transformers
+
+# newer sqlite for chroma on Streamlit Cloud (Linux only, same fix as Lab 4)
+pysqlite3-binary; sys_platform == "linux"
